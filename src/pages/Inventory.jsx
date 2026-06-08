@@ -60,7 +60,7 @@ export default function Inventory() {
     category: "",
     barcode: generateBarcode(),
   });
-
+const [editingId, setEditingId] = useState(null);
   // Load categories from database on mount
   useEffect(() => {
     loadCategories();
@@ -130,19 +130,39 @@ const loadItems = async () => {
     setFormData({ ...formData, barcode: generateBarcode() });
   };
 
-  const openAddItemModal = () => {
-    setFormData({
-      name: "",
-      code: "",
-      buyingPrice: "",
-      sellingPrice: "",
-      discount: "",
-      discountType: "percentage",
-      category: "",
-      barcode: generateBarcode(),
-    });
-    setShowModal(true);
-  };
+const openAddItemModal = () => {
+  setEditingId(null);
+
+  setFormData({
+    name: "",
+    code: "",
+    buyingPrice: "",
+    sellingPrice: "",
+    discount: "",
+    discountType: "percentage",
+    category: "",
+    barcode: generateBarcode(),
+  });
+
+  setShowModal(true);
+};
+
+const editProduct = (item) => {
+  setEditingId(item.id);
+
+  setFormData({
+    name: item.name || "",
+    code: item.code || "",
+    buyingPrice: item.buyingPrice || "",
+    sellingPrice: item.sellingPrice || "",
+    discount: item.discount || "",
+    discountType: item.discountType || "percentage",
+    category: item.category || "",
+    barcode: item.barcode || "",
+  });
+
+  setShowModal(true);
+};
 
   const closeModal = () => {
     setShowModal(false);
@@ -166,33 +186,77 @@ const loadItems = async () => {
       setItemError("");
 
       try {
-        await invoke("add_item", {
-          name: formData.name,
-          code: formData.code,
-          buyingPrice: parseFloat(formData.buyingPrice),
-          sellingPrice: parseFloat(formData.sellingPrice),
-          discount: formData.discount ? parseFloat(formData.discount) : 0,
-          discountType: formData.discountType,
-          category: formData.category,
-          barcode: formData.barcode,
-        });
+  if (editingId) {
+    const updatedProduct = {
+      id: editingId,
+      name: formData.name,
+      code: formData.code,
+      buyingPrice: parseFloat(formData.buyingPrice),
+      sellingPrice: parseFloat(formData.sellingPrice),
+      discount: formData.discount ? parseFloat(formData.discount) : 0,
+      discountType: formData.discountType,
+      category: formData.category,
+      barcode: formData.barcode,
+    };
 
-        const newProduct = {
-          id: Date.now(),
-          name: formData.name,
-          code: formData.code,
-          buyingPrice: parseFloat(formData.buyingPrice),
-          sellingPrice: parseFloat(formData.sellingPrice),
-          discount: formData.discount ? parseFloat(formData.discount) : 0,
-          discountType: formData.discountType,
-          category: formData.category,
-          barcode: formData.barcode,
-        };
-        setInventory([...inventory, newProduct]);
-        closeModal();
-      } catch (err) {
-        setItemError(err?.toString?.() || "Failed to save item");
-      } finally {
+    setInventory(
+      inventory.map((item) =>
+        item.id === editingId ? updatedProduct : item
+      )
+    );
+
+    // Optional Tauri command
+   await invoke("update_item", {
+  id: editingId,
+  name: formData.name,
+  code: formData.code,
+  buyingPrice: parseFloat(formData.buyingPrice),
+  sellingPrice: parseFloat(formData.sellingPrice),
+  discount: formData.discount
+    ? parseFloat(formData.discount)
+    : 0,
+  discountType: formData.discountType,
+  category: formData.category,
+  barcode: formData.barcode,
+});
+
+await loadItems();
+
+  } else {
+    await invoke("add_item", {
+      name: formData.name,
+      code: formData.code,
+      buyingPrice: parseFloat(formData.buyingPrice),
+      sellingPrice: parseFloat(formData.sellingPrice),
+      discount: formData.discount
+        ? parseFloat(formData.discount)
+        : 0,
+      discountType: formData.discountType,
+      category: formData.category,
+      barcode: formData.barcode,
+    });
+
+    const newProduct = {
+      id: Date.now(),
+      name: formData.name,
+      code: formData.code,
+      buyingPrice: parseFloat(formData.buyingPrice),
+      sellingPrice: parseFloat(formData.sellingPrice),
+      discount: formData.discount
+        ? parseFloat(formData.discount)
+        : 0,
+      discountType: formData.discountType,
+      category: formData.category,
+      barcode: formData.barcode,
+    };
+
+    setInventory([...inventory, newProduct]);
+  }
+
+  closeModal();
+} catch (err) {
+  setItemError(err?.toString?.() || "Failed to save item");
+} finally {
         setItemLoading(false);
       }
     } else {
@@ -200,9 +264,15 @@ const loadItems = async () => {
     }
   };
 
-  const deleteProduct = (id) => {
-    setInventory(inventory.filter((item) => item.id !== id));
-  };
+const deleteProduct = async (id) => {
+  try {
+    await invoke("delete_item", { id });
+    await loadItems();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete item");
+  }
+};
 
   const filteredInventory =
     selectedCategory === ""
@@ -302,7 +372,7 @@ const loadItems = async () => {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add New Item</h3>
+             <h3>{editingId ? "Edit Item" : "Add New Item"}</h3>
               <button className="modal-close" onClick={closeModal}>
                 ×
               </button>
@@ -424,7 +494,11 @@ const loadItems = async () => {
                 Cancel
               </button>
               <button className="btn-save" onClick={addProduct} disabled={itemLoading}>
-                {itemLoading ? "Saving..." : "Save Item"}
+                {itemLoading
+  ? "Saving..."
+  : editingId
+  ? "Update Item"
+  : "Save Item"}
               </button>
             </div>
           </div>
@@ -465,13 +539,20 @@ const loadItems = async () => {
                 )}
               </td>
               <td>
-                <button
-                  className="btn-delete"
-                  onClick={() => deleteProduct(item.id)}
-                >
-                  Delete
-                </button>
-              </td>
+  <button
+    className="btn-edit"
+    onClick={() => editProduct(item)}
+  >
+    Edit
+  </button>
+
+  <button
+    className="btn-delete"
+    onClick={() => deleteProduct(item.id)}
+  >
+    Delete
+  </button>
+</td>
             </tr>
           ))}
         </tbody>

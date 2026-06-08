@@ -201,6 +201,62 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+fn update_item(
+    id: u32,
+    name: String,
+    code: String,
+    buyingPrice: f64,
+    sellingPrice: f64,
+    discount: f64,
+    discountType: String,
+    category: String,
+    barcode: String,
+) -> Result<String, String> {
+    let mut conn = get_connection().map_err(|e| e.to_string())?;
+
+    let category_id: Option<u32> = conn
+        .exec_first(
+            "SELECT id FROM categories WHERE name = ?",
+            (category.clone(),),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let category_id = category_id.ok_or("Category not found")?;
+
+    conn.exec_drop(
+        "UPDATE items
+         SET name=?, code=?, buying_price=?, selling_price=?,
+             discount=?, discount_type=?, category_id=?, barcode=?
+         WHERE id=?",
+        (
+            name,
+            code,
+            buyingPrice,
+            sellingPrice,
+            discount,
+            discountType,
+            category_id,
+            barcode,
+            id,
+        ),
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok("Item updated successfully".to_string())
+}
+#[tauri::command]
+fn delete_item(id: u32) -> Result<String, String> {
+    let mut conn = get_connection().map_err(|e| e.to_string())?;
+
+    conn.exec_drop(
+        "DELETE FROM items WHERE id=?",
+        (id,),
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok("Item deleted successfully".to_string())
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -210,6 +266,8 @@ pub fn run() {
             add_category,
             get_categories,
             add_item,
+            update_item,
+            delete_item,
             get_items
         ])
         .run(tauri::generate_context!())

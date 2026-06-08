@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
 // Generate unique barcode
 const generateBarcode = () => {
@@ -31,8 +32,24 @@ export default function Inventory() {
     },
   ]);
 
+  const [categories, setCategories] = useState([
+    "Electronics",
+    "Clothing",
+    "Food",
+    "Books",
+    "Furniture",
+    "Other",
+  ]);
+
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [itemLoading, setItemLoading] = useState(false);
+  const [itemError, setItemError] = useState("");
+
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -44,7 +61,55 @@ export default function Inventory() {
     barcode: generateBarcode(),
   });
 
-  const categories = ["Electronics", "Clothing", "Food", "Books", "Furniture", "Other"];
+  // Load categories from database on mount
+  useEffect(() => {
+    loadCategories();
+    loadItems();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const result = await invoke("get_categories");
+      if (result && result.length > 0) {
+        const categoryNames = result.map((cat) => cat.name);
+        setCategories(categoryNames);
+      }
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+    }
+  };
+
+  const loadItems = async () => {
+    try {
+      const result = await invoke("get_items");
+      if (result && result.length > 0) {
+        setInventory(result);
+      }
+    } catch (err) {
+      console.error("Failed to load items:", err);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      setError("Please enter a category name");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      await invoke("add_category", { name: newCategoryName });
+      await loadCategories();
+      setNewCategoryName("");
+      setShowCategoryModal(false);
+    } catch (err) {
+      setError(err?.toString?.() || "Failed to add category");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -77,7 +142,13 @@ export default function Inventory() {
     setShowModal(false);
   };
 
-  const addProduct = () => {
+  const closeCategoryModal = () => {
+    setShowCategoryModal(false);
+    setNewCategoryName("");
+    setError("");
+  };
+
+  const addProduct = async () => {
     if (
       formData.name &&
       formData.code &&
@@ -85,19 +156,39 @@ export default function Inventory() {
       formData.sellingPrice &&
       formData.category
     ) {
-      const newProduct = {
-        id: Date.now(),
-        name: formData.name,
-        code: formData.code,
-        buyingPrice: parseFloat(formData.buyingPrice),
-        sellingPrice: parseFloat(formData.sellingPrice),
-        discount: formData.discount ? parseFloat(formData.discount) : 0,
-        discountType: formData.discountType,
-        category: formData.category,
-        barcode: formData.barcode,
-      };
-      setInventory([...inventory, newProduct]);
-      closeModal();
+      setItemLoading(true);
+      setItemError("");
+
+      try {
+        await invoke("add_item", {
+          name: formData.name,
+          code: formData.code,
+          buyingPrice: parseFloat(formData.buyingPrice),
+          sellingPrice: parseFloat(formData.sellingPrice),
+          discount: formData.discount ? parseFloat(formData.discount) : 0,
+          discountType: formData.discountType,
+          category: formData.category,
+          barcode: formData.barcode,
+        });
+
+        const newProduct = {
+          id: Date.now(),
+          name: formData.name,
+          code: formData.code,
+          buyingPrice: parseFloat(formData.buyingPrice),
+          sellingPrice: parseFloat(formData.sellingPrice),
+          discount: formData.discount ? parseFloat(formData.discount) : 0,
+          discountType: formData.discountType,
+          category: formData.category,
+          barcode: formData.barcode,
+        };
+        setInventory([...inventory, newProduct]);
+        closeModal();
+      } catch (err) {
+        setItemError(err?.toString?.() || "Failed to save item");
+      } finally {
+        setItemLoading(false);
+      }
     } else {
       alert("Please fill all required fields");
     }
@@ -117,21 +208,31 @@ export default function Inventory() {
       <h2>Inventory</h2>
 
       <div className="inventory-controls">
-        <div className="category-filter">
-          <label htmlFor="category-select">Filter by Category:</label>
-          <select
-            id="category-select"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="category-select"
+        <div className="control-group">
+          <div className="category-filter">
+            <label htmlFor="category-select">Filter by Category:</label>
+            <select
+              id="category-select"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="category-select"
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            className="btn-add-category"
+            onClick={() => setShowCategoryModal(true)}
+            title="Add new category"
           >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+            + Category
+          </button>
         </div>
 
         <button className="btn-add-product" onClick={openAddItemModal}>
@@ -139,7 +240,58 @@ export default function Inventory() {
         </button>
       </div>
 
-      {/* Modal Dialog */}
+      {/* Add Category Modal Dialog */}
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={closeCategoryModal}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Category</h3>
+              <button className="modal-close" onClick={closeCategoryModal}>
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Category Name *</label>
+                <input
+                  type="text"
+                  placeholder="Enter category name (e.g., Electronics)"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddCategory();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              {error && <div className="error-message">{error}</div>}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn-cancel"
+                onClick={closeCategoryModal}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-save"
+                onClick={handleAddCategory}
+                disabled={loading}
+              >
+                {loading ? "Adding..." : "Add Category"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Item Modal Dialog */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -257,14 +409,16 @@ export default function Inventory() {
                   </button>
                 </div>
               </div>
+
+              {itemError && <div className="error-message">{itemError}</div>}
             </div>
 
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={closeModal}>
+              <button className="btn-cancel" onClick={closeModal} disabled={itemLoading}>
                 Cancel
               </button>
-              <button className="btn-save" onClick={addProduct}>
-                Save Item
+              <button className="btn-save" onClick={addProduct} disabled={itemLoading}>
+                {itemLoading ? "Saving..." : "Save Item"}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import QuantityDialog from "./QuantityDialog";
 
 export default function Sales() {
   const [cartItems, setCartItems] = useState([]);
@@ -7,10 +8,11 @@ export default function Sales() {
   const [searchCode, setSearchCode] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [itemName, setItemName] = useState("");
-  const [itemPrice, setItemPrice] = useState("");
-  const [itemQty, setItemQty] = useState("1");
   const [error, setError] = useState("");
+
+  // QuantityDialog state
+  const [pendingProduct, setPendingProduct] = useState(null); // product awaiting qty
+
   const searchInputRef = useRef(null);
   const suggestionRefs = useRef([]);
 
@@ -40,23 +42,69 @@ export default function Sales() {
     }
   };
 
-  // Filter suggestions based on code or barcode (case-insensitive)
+  // ─── Suggestion scoring ───────────────────────────────────────────────────
+  // Returns a score: lower = better match
+  // 0 = exact match on code/barcode
+  // 1 = starts-with match on code/barcode
+  // 2 = starts-with match on name
+  // 3 = contains match on code/barcode
+  // 4 = contains match on name
+  const scoreMatch = (item, query) => {
+    const q = query.toLowerCase();
+    const code = (item.code || "").toLowerCase();
+    const barcode = (item.barcode || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+
+    if (code === q || barcode === q) return 0;
+    if (code.startsWith(q) || barcode.startsWith(q)) return 1;
+    if (name.startsWith(q)) return 2;
+    if (code.includes(q) || barcode.includes(q)) return 3;
+    if (name.includes(q)) return 4;
+    return 99; // no match
+  };
+
+  // Filter + sort suggestions based on match quality
   useEffect(() => {
     if (searchCode.trim() === "") {
       setSuggestions([]);
       setSelectedSuggestionIndex(-1);
       return;
     }
-    const query = searchCode.trim().toLowerCase();
-    const matches = inventory.filter(item =>
-      item.code?.toLowerCase().includes(query) ||
-      item.barcode?.toLowerCase().includes(query)
-    ).slice(0, 8); // limit to 8 suggestions
-    setSuggestions(matches);
+    const query = searchCode.trim();
+
+    const scored = inventory
+      .map(item => ({ item, score: scoreMatch(item, query) }))
+      .filter(({ score }) => score < 99)
+      .sort((a, b) => a.score - b.score || a.item.name.localeCompare(b.item.name))
+      .slice(0, 8)
+      .map(({ item }) => item);
+
+    setSuggestions(scored);
     setSelectedSuggestionIndex(-1);
   }, [searchCode, inventory]);
 
-  // Handle keyboard navigation
+  // Scroll highlighted suggestion into view
+  useEffect(() => {
+    if (
+      selectedSuggestionIndex >= 0 &&
+      suggestionRefs.current[selectedSuggestionIndex]
+    ) {
+      suggestionRefs.current[selectedSuggestionIndex].scrollIntoView({
+        block: "nearest",
+      });
+    }
+  }, [selectedSuggestionIndex]);
+
+  // ─── Open quantity dialog for a product ───────────────────────────────────
+  const openQtyDialog = (product) => {
+    setSearchCode(product.code || product.barcode || "");
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setError("");
+    setPendingProduct(product);
+  };
+
+  // ─── Keyboard navigation on search input ─────────────────────────────────
   const handleKeyDown = (e) => {
     if (suggestions.length === 0) {
       if (e.key === "Enter") {
@@ -80,10 +128,9 @@ export default function Sales() {
       case "Enter":
         e.preventDefault();
         if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
-          selectProduct(suggestions[selectedSuggestionIndex]);
+          openQtyDialog(suggestions[selectedSuggestionIndex]);
         } else if (suggestions.length > 0) {
-          // If no item is highlighted, select the first one
-          selectProduct(suggestions[0]);
+          openQtyDialog(suggestions[0]);
         } else {
           handleSearch();
         }
@@ -97,75 +144,57 @@ export default function Sales() {
     }
   };
 
-  // Select a product from suggestions
-  const selectProduct = (product) => {
-    setItemName(product.name);
-    setItemPrice(product.sellingPrice.toString());
-    setSearchCode(product.code || product.barcode); // Show the selected code in input
-    setSuggestions([]);
-    setSelectedSuggestionIndex(-1);
-    setError("");
-    // Focus on quantity input after selection (optional)
-    document.getElementById("sales-qty")?.focus();
-  };
-
-  // Manual search when button is clicked or Enter without suggestions
+  // Manual search (exact match)
   const handleSearch = () => {
     setError("");
     if (!searchCode.trim()) {
       setError("Please enter a product code or barcode.");
       return;
     }
-    const product = inventory.find(item =>
-      item.code?.toLowerCase() === searchCode.trim().toLowerCase() ||
-      item.barcode?.toLowerCase() === searchCode.trim().toLowerCase()
+    const product = inventory.find(
+      item =>
+        item.code?.toLowerCase() === searchCode.trim().toLowerCase() ||
+        item.barcode?.toLowerCase() === searchCode.trim().toLowerCase()
     );
     if (product) {
-      selectProduct(product);
+      openQtyDialog(product);
     } else {
       setError(`Product with code/barcode "${searchCode}" not found.`);
-      setItemName("");
-      setItemPrice("");
     }
   };
 
-  const addItem = () => {
-    if (!itemName || !itemPrice || !itemQty) {
-      setError("Please fill in all fields (name, price, quantity).");
-      return;
-    }
-    const priceNum = parseFloat(itemPrice);
-    const qtyNum = parseInt(itemQty);
-    if (isNaN(priceNum) || isNaN(qtyNum) || priceNum <= 0 || qtyNum <= 0) {
-      setError("Invalid price or quantity.");
-      return;
-    }
+  // ─── QuantityDialog callbacks ─────────────────────────────────────────────
+  const handleQtyConfirm = (qty) => {
+    if (!pendingProduct) return;
 
     const newItem = {
       id: Date.now(),
-      name: itemName,
-      price: priceNum,
-      quantity: qtyNum,
+      name: pendingProduct.name,
+      price: pendingProduct.sellingPrice,
+      quantity: qty,
     };
-    setCartItems([...cartItems, newItem]);
+    setCartItems(prev => [...prev, newItem]);
 
-    // Reset form but keep last used code? Better to clear for next scan.
-    setItemName("");
-    setItemPrice("");
-    setItemQty("1");
+    setPendingProduct(null);
     setSearchCode("");
     setSuggestions([]);
-    setSelectedSuggestionIndex(-1);
     setError("");
-    searchInputRef.current?.focus();
+    setTimeout(() => searchInputRef.current?.focus(), 50);
   };
 
+  const handleQtyCancel = () => {
+    setPendingProduct(null);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
+  // ─── Cart helpers ─────────────────────────────────────────────────────────
   const removeItem = (id) => {
     setCartItems(cartItems.filter(item => item.id !== id));
   };
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="page-container">
       <h2>Sales</h2>
@@ -177,23 +206,30 @@ export default function Sales() {
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Type or scan code/barcode"
+            placeholder="Type or scan code / barcode / name"
             value={searchCode}
             onChange={(e) => setSearchCode(e.target.value)}
             onKeyDown={handleKeyDown}
             autoComplete="off"
           />
+
           {suggestions.length > 0 && (
             <ul className="suggestions-dropdown">
               {suggestions.map((item, idx) => (
                 <li
                   key={item.id}
-                  ref={el => suggestionRefs.current[idx] = el}
+                  ref={el => (suggestionRefs.current[idx] = el)}
                   className={idx === selectedSuggestionIndex ? "selected" : ""}
-                  onClick={() => selectProduct(item)}
+                  onClick={() => openQtyDialog(item)}
                   onMouseEnter={() => setSelectedSuggestionIndex(idx)}
                 >
-                  <strong>{item.code}</strong> {item.barcode && `(${item.barcode})`} - {item.name}
+                  <strong>{item.code}</strong>
+                  {item.barcode && ` (${item.barcode})`}
+                  {" — "}
+                  {item.name}
+                  <span className="suggestion-price">
+                    LKR {item.sellingPrice.toFixed(2)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -201,7 +237,9 @@ export default function Sales() {
         </div>
       </div>
 
+      {error && <p className="error-msg">{error}</p>}
 
+      {/* Cart table */}
       <table className="cart-table">
         <thead>
           <tr>
@@ -213,7 +251,7 @@ export default function Sales() {
           </tr>
         </thead>
         <tbody>
-          {cartItems.map((item) => (
+          {cartItems.map(item => (
             <tr key={item.id}>
               <td>{item.name}</td>
               <td>{item.price.toFixed(2)}</td>
@@ -231,7 +269,7 @@ export default function Sales() {
 
       {cartItems.length === 0 && (
         <div className="empty-state">
-          <p>No items added. Search for a product using its code or barcode.</p>
+          <p>No items added. Search for a product using its code, barcode, or name.</p>
         </div>
       )}
 
@@ -241,6 +279,13 @@ export default function Sales() {
           Checkout
         </button>
       </div>
+
+      {/* Quantity Dialog */}
+      <QuantityDialog
+        product={pendingProduct}
+        onConfirm={handleQtyConfirm}
+        onCancel={handleQtyCancel}
+      />
     </div>
   );
 }

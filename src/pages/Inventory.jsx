@@ -79,16 +79,22 @@ export default function Inventory() {
     }
   };
 
-  const loadItems = async () => {
-    try {
-      const result = await invoke("get_items");
-      if (result && result.length > 0) {
-        setInventory(result);
-      }
-    } catch (err) {
-      console.error("Failed to load items:", err);
-    }
-  };
+const loadItems = async () => {
+  try {
+    const result = await invoke("get_items");
+
+    const formattedItems = result.map(item => ({
+      ...item,
+      buyingPrice: Number(item.buyingPrice || item.buying_price || 0),
+      sellingPrice: Number(item.sellingPrice || item.selling_price || 0),
+      discount: Number(item.discount || 0),
+    }));
+
+    setInventory(formattedItems);
+  } catch (err) {
+    console.error("Failed to load items:", err);
+  }
+};
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {

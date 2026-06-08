@@ -679,3 +679,41 @@ body {
     color: #999;
   }
 }
+.sales-search {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgb(199, 42, 42);
+  border: 1px solid #ccc;
+  border-top: none;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.suggestions-dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #8f8b8b;
+}
+
+.suggestions-dropdown li.selected {
+  background-color: #cc2f2f;
+}
+
+.suggestions-dropdown li:hover {
+  background-color: #8f2d2d;
+}

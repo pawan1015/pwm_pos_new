@@ -75,9 +75,9 @@ export default function Sales() {
           {cartItems.map((item) => (
             <tr key={item.id}>
               <td>{item.name}</td>
-              <td>${item.price.toFixed(2)}</td>
+              <td>LKR{item.price.toFixed(2)}</td>
               <td>{item.quantity}</td>
-              <td>${(item.price * item.quantity).toFixed(2)}</td>
+              <td>LKR{(item.price * item.quantity).toFixed(2)}</td>
               <td>
                 <button
                   className="btn-remove"
@@ -92,7 +92,7 @@ export default function Sales() {
       </table>
 
       <div className="sales-summary">
-        <h3>Total: ${total.toFixed(2)}</h3>
+        <h3>Total: LKR{total.toFixed(2)}</h3>
         <button className="btn-checkout" disabled={cartItems.length === 0}>
           Checkout
         </button>

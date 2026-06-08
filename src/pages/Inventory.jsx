@@ -447,7 +447,7 @@ const deleteProduct = async (id) => {
                       className="discount-type-select"
                     >
                       <option value="percentage">%</option>
-                      <option value="value">Fixed ($)</option>
+                      <option value="value">Fixed (LKR)</option>
                     </select>
                   </div>
                 </div>
@@ -512,8 +512,8 @@ const deleteProduct = async (id) => {
             <th>Product Name</th>
             <th>Code</th>
             <th>Category</th>
-            <th>Buying Price</th>
-            <th>Selling Price</th>
+            <th>Buying Price (LKR)</th>
+            <th>Selling Price (LKR)</th>
             <th>Discount</th>
             <th>Actions</th>
           </tr>
@@ -527,13 +527,13 @@ const deleteProduct = async (id) => {
               <td>
                 <span className="category-badge">{item.category}</span>
               </td>
-              <td>${item.buyingPrice.toFixed(2)}</td>
-              <td>${item.sellingPrice.toFixed(2)}</td>
+              <td>{item.buyingPrice.toFixed(2)}</td>
+              <td>{item.sellingPrice.toFixed(2)}</td>
               <td>
                 {item.discount > 0 ? (
                   <span className="discount-badge">
                     {item.discount}
-                    {item.discountType === "percentage" ? "%" : "$"}
+                    {item.discountType === "percentage" ? "%" : "LKR"}
                   </span>
                 ) : (
                   <span>-</span>

@@ -88,6 +88,7 @@ const loadItems = async () => {
       buyingPrice: Number(item.buyingPrice || item.buying_price || 0),
       sellingPrice: Number(item.sellingPrice || item.selling_price || 0),
       discount: Number(item.discount || 0),
+      discountType: item.discountType || item.discount_type || "percentage", // ✅ added this line
     }));
 
     setInventory(formattedItems);

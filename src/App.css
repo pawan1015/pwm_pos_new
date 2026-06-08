@@ -232,6 +232,278 @@ body {
   box-shadow: 0 0 0 2px rgba(57, 108, 216, 0.1);
 }
 
+/* Inventory Controls */
+.inventory-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.category-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: white;
+  padding: 10px 15px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.category-filter label {
+  font-weight: 600;
+  color: #0f0f0f;
+  white-space: nowrap;
+}
+
+.category-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  color: #0f0f0f;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.category-select:focus {
+  outline: none;
+  border-color: #396cd8;
+  box-shadow: 0 0 0 2px rgba(57, 108, 216, 0.1);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-dialog {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9f9f9;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #0f0f0f;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #e8e8e8;
+  color: #0f0f0f;
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-row .form-group {
+  margin-bottom: 0;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #0f0f0f;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background-color: white;
+  color: #0f0f0f;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #396cd8;
+  box-shadow: 0 0 0 3px rgba(57, 108, 216, 0.1);
+}
+
+/* Discount Group */
+.discount-group {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.discount-type-select {
+  min-width: 80px;
+}
+
+/* Barcode Group */
+.barcode-group {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.barcode-input {
+  background-color: #f9f9f9;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.btn-regenerate {
+  padding: 10px 15px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-regenerate:hover {
+  background-color: #5a6268;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 25px;
+  border-top: 1px solid #eee;
+  background-color: #f9f9f9;
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #5a6268;
+}
+
+/* Badges */
+.barcode-badge {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.category-badge {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.discount-badge {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state p {
+  color: #999;
+  font-size: 16px;
+  margin: 0;
+}
+
 /* Sales Summary */
 .sales-summary {
   background-color: white;
@@ -323,5 +595,87 @@ body {
 
   .sales-summary h3 {
     color: #f6f6f6;
+  }
+
+  /* Dark mode for inventory controls */
+  .inventory-controls {
+    flex-wrap: wrap;
+  }
+
+  .category-filter {
+    background-color: #2c3e50;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .category-filter label {
+    color: #f6f6f6;
+  }
+
+  .category-select {
+    background-color: #1e1e1e;
+    color: #f6f6f6;
+    border-color: #444;
+  }
+
+  /* Dark mode for modal */
+  .modal-dialog {
+    background-color: #2c3e50;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-header {
+    background-color: #1e1e1e;
+    border-bottom-color: #444;
+  }
+
+  .modal-header h3 {
+    color: #f6f6f6;
+  }
+
+  .modal-close {
+    color: #999;
+  }
+
+  .modal-close:hover {
+    background-color: #3a4a5f;
+    color: #f6f6f6;
+  }
+
+  .modal-body {
+    color: #f6f6f6;
+  }
+
+  .form-group label {
+    color: #f6f6f6;
+  }
+
+  .form-group input,
+  .form-group select {
+    background-color: #1e1e1e;
+    color: #f6f6f6;
+    border-color: #444;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: #396cd8;
+    box-shadow: 0 0 0 3px rgba(57, 108, 216, 0.2);
+  }
+
+  .barcode-input {
+    background-color: #3a4a5f;
+  }
+
+  .modal-footer {
+    background-color: #1e1e1e;
+    border-top-color: #444;
+  }
+
+  .empty-state {
+    background-color: #2c3e50;
+  }
+
+  .empty-state p {
+    color: #999;
   }
 }

@@ -1,36 +1,105 @@
 import { useState } from "react";
 
+// Generate unique barcode
+const generateBarcode = () => {
+  return "BC" + Date.now() + Math.random().toString(36).substr(2, 9).toUpperCase();
+};
+
 export default function Inventory() {
   const [inventory, setInventory] = useState([
-    { id: 1, name: "Product A", sku: "SKU001", quantity: 50, price: 19.99 },
-    { id: 2, name: "Product B", sku: "SKU002", quantity: 30, price: 29.99 },
+    {
+      id: 1,
+      name: "Product A",
+      code: "PRD001",
+      buyingPrice: 10.0,
+      sellingPrice: 19.99,
+      discount: 0,
+      discountType: "percentage",
+      category: "Electronics",
+      barcode: "BC1700000001ABC123",
+    },
+    {
+      id: 2,
+      name: "Product B",
+      code: "PRD002",
+      buyingPrice: 15.0,
+      sellingPrice: 29.99,
+      discount: 0,
+      discountType: "percentage",
+      category: "Clothing",
+      barcode: "BC1700000002DEF456",
+    },
   ]);
 
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [formData, setFormData] = useState({
     name: "",
-    sku: "",
-    quantity: "",
-    price: "",
+    code: "",
+    buyingPrice: "",
+    sellingPrice: "",
+    discount: "",
+    discountType: "percentage",
+    category: "",
+    barcode: generateBarcode(),
   });
+
+  const categories = ["Electronics", "Clothing", "Food", "Books", "Furniture", "Other"];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    if (name === "discountType") {
+      setFormData({ ...formData, [name]: value });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleGenerateBarcode = () => {
+    setFormData({ ...formData, barcode: generateBarcode() });
+  };
+
+  const openAddItemModal = () => {
+    setFormData({
+      name: "",
+      code: "",
+      buyingPrice: "",
+      sellingPrice: "",
+      discount: "",
+      discountType: "percentage",
+      category: "",
+      barcode: generateBarcode(),
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
   };
 
   const addProduct = () => {
-    if (formData.name && formData.sku && formData.quantity && formData.price) {
+    if (
+      formData.name &&
+      formData.code &&
+      formData.buyingPrice &&
+      formData.sellingPrice &&
+      formData.category
+    ) {
       const newProduct = {
         id: Date.now(),
         name: formData.name,
-        sku: formData.sku,
-        quantity: parseInt(formData.quantity),
-        price: parseFloat(formData.price),
+        code: formData.code,
+        buyingPrice: parseFloat(formData.buyingPrice),
+        sellingPrice: parseFloat(formData.sellingPrice),
+        discount: formData.discount ? parseFloat(formData.discount) : 0,
+        discountType: formData.discountType,
+        category: formData.category,
+        barcode: formData.barcode,
       };
       setInventory([...inventory, newProduct]);
-      setFormData({ name: "", sku: "", quantity: "", price: "" });
-      setShowForm(false);
+      closeModal();
+    } else {
+      alert("Please fill all required fields");
     }
   };
 
@@ -38,93 +107,206 @@ export default function Inventory() {
     setInventory(inventory.filter((item) => item.id !== id));
   };
 
-  const updateQuantity = (id, newQty) => {
-    setInventory(
-      inventory.map((item) =>
-        item.id === id ? { ...item, quantity: parseInt(newQty) } : item
-      )
-    );
-  };
+  const filteredInventory =
+    selectedCategory === ""
+      ? inventory
+      : inventory.filter((item) => item.category === selectedCategory);
 
   return (
     <div className="page-container">
       <h2>Inventory</h2>
 
-      <button
-        className="btn-add-product"
-        onClick={() => setShowForm(!showForm)}
-      >
-        {showForm ? "Cancel" : "Add Product"}
-      </button>
+      <div className="inventory-controls">
+        <div className="category-filter">
+          <label htmlFor="category-select">Filter by Category:</label>
+          <select
+            id="category-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="category-select"
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {showForm && (
-        <div className="inventory-form">
-          <div className="form-group">
-            <input
-              type="text"
-              name="name"
-              placeholder="Product Name"
-              value={formData.name}
-              onChange={handleInputChange}
-            />
+        <button className="btn-add-product" onClick={openAddItemModal}>
+          + Add Item
+        </button>
+      </div>
+
+      {/* Modal Dialog */}
+      {showModal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Item</h3>
+              <button className="modal-close" onClick={closeModal}>
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Product Name *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Enter product name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Product Code *</label>
+                  <input
+                    type="text"
+                    name="code"
+                    placeholder="e.g., PRD001"
+                    value={formData.code}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Buying Price *</label>
+                  <input
+                    type="number"
+                    name="buyingPrice"
+                    placeholder="0.00"
+                    value={formData.buyingPrice}
+                    onChange={handleInputChange}
+                    step="0.01"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Selling Price *</label>
+                  <input
+                    type="number"
+                    name="sellingPrice"
+                    placeholder="0.00"
+                    value={formData.sellingPrice}
+                    onChange={handleInputChange}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Discount</label>
+                  <div className="discount-group">
+                    <input
+                      type="number"
+                      name="discount"
+                      placeholder="0"
+                      value={formData.discount}
+                      onChange={handleInputChange}
+                      step="0.01"
+                    />
+                    <select
+                      name="discountType"
+                      value={formData.discountType}
+                      onChange={handleInputChange}
+                      className="discount-type-select"
+                    >
+                      <option value="percentage">%</option>
+                      <option value="value">Fixed ($)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Category *</label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Barcode (Auto-generated)</label>
+                <div className="barcode-group">
+                  <input
+                    type="text"
+                    value={formData.barcode}
+                    readOnly
+                    className="barcode-input"
+                  />
+                  <button
+                    type="button"
+                    className="btn-regenerate"
+                    onClick={handleGenerateBarcode}
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={closeModal}>
+                Cancel
+              </button>
+              <button className="btn-save" onClick={addProduct}>
+                Save Item
+              </button>
+            </div>
           </div>
-          <div className="form-group">
-            <input
-              type="text"
-              name="sku"
-              placeholder="SKU"
-              value={formData.sku}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="form-group">
-            <input
-              type="number"
-              name="quantity"
-              placeholder="Quantity"
-              value={formData.quantity}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="form-group">
-            <input
-              type="number"
-              name="price"
-              placeholder="Price"
-              value={formData.price}
-              onChange={handleInputChange}
-            />
-          </div>
-          <button className="btn-save" onClick={addProduct}>
-            Save Product
-          </button>
         </div>
       )}
 
       <table className="inventory-table">
         <thead>
           <tr>
+            <th>Barcode</th>
             <th>Product Name</th>
-            <th>SKU</th>
-            <th>Quantity</th>
-            <th>Price</th>
+            <th>Code</th>
+            <th>Category</th>
+            <th>Buying Price</th>
+            <th>Selling Price</th>
+            <th>Discount</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {inventory.map((item) => (
+          {filteredInventory.map((item) => (
             <tr key={item.id}>
-              <td>{item.name}</td>
-              <td>{item.sku}</td>
               <td>
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => updateQuantity(item.id, e.target.value)}
-                  className="qty-input"
-                />
+                <span className="barcode-badge">{item.barcode}</span>
               </td>
-              <td>${item.price.toFixed(2)}</td>
+              <td>{item.name}</td>
+              <td>{item.code}</td>
+              <td>
+                <span className="category-badge">{item.category}</span>
+              </td>
+              <td>${item.buyingPrice.toFixed(2)}</td>
+              <td>${item.sellingPrice.toFixed(2)}</td>
+              <td>
+                {item.discount > 0 ? (
+                  <span className="discount-badge">
+                    {item.discount}
+                    {item.discountType === "percentage" ? "%" : "$"}
+                  </span>
+                ) : (
+                  <span>-</span>
+                )}
+              </td>
               <td>
                 <button
                   className="btn-delete"
@@ -137,6 +319,12 @@ export default function Inventory() {
           ))}
         </tbody>
       </table>
+
+      {filteredInventory.length === 0 && (
+        <div className="empty-state">
+          <p>No items found. Add your first item to get started!</p>
+        </div>
+      )}
     </div>
   );
 }

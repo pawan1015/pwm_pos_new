@@ -199,48 +199,8 @@ export default function Sales() {
             </ul>
           )}
         </div>
-        <button className="btn-find" onClick={handleSearch}>
-          Find
-        </button>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
-
-      <div className="sales-form">
-        <div className="form-group">
-          <label>Item Name</label>
-          <input
-            type="text"
-            placeholder="Item Name"
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>Selling Price (LKR)</label>
-          <input
-            type="number"
-            placeholder="Price"
-            value={itemPrice}
-            onChange={(e) => setItemPrice(e.target.value)}
-            step="0.01"
-          />
-        </div>
-        <div className="form-group">
-          <label>Quantity</label>
-          <input
-            id="sales-qty"
-            type="number"
-            placeholder="Quantity"
-            value={itemQty}
-            onChange={(e) => setItemQty(e.target.value)}
-            min="1"
-          />
-        </div>
-        <button className="btn-add" onClick={addItem}>
-          Add Item
-        </button>
-      </div>
 
       <table className="cart-table">
         <thead>

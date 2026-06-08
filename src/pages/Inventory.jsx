@@ -434,7 +434,6 @@ const loadItems = async () => {
       <table className="inventory-table">
         <thead>
           <tr>
-            <th>Barcode</th>
             <th>Product Name</th>
             <th>Code</th>
             <th>Category</th>
@@ -447,9 +446,7 @@ const loadItems = async () => {
         <tbody>
           {filteredInventory.map((item) => (
             <tr key={item.id}>
-              <td>
-                <span className="barcode-badge">{item.barcode}</span>
-              </td>
+            
               <td>{item.name}</td>
               <td>{item.code}</td>
               <td>

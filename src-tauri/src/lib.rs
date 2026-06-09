@@ -67,17 +67,25 @@ fn init_database() -> Result<()> {
             discount_type VARCHAR(20) DEFAULT 'percentage',
             category_id INT NOT NULL,
             barcode VARCHAR(100) NOT NULL UNIQUE,
+            quantity INT NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories(id)
         )",
     )?;
+
+    // Add quantity column if it doesn't exist (for existing databases)
+    let alter_result = conn.query_drop(
+        "ALTER TABLE items ADD COLUMN IF NOT EXISTS quantity INT NOT NULL DEFAULT 0"
+    );
+    if let Err(e) = alter_result {
+        eprintln!("Note: Could not add quantity column (maybe already there): {}", e);
+    }
 
     Ok(())
 }
 
 #[tauri::command]
 fn add_category(name: String) -> Result<String, String> {
-    // Initialize database
     init_database().map_err(|e| e.to_string())?;
 
     let mut conn = get_connection().map_err(|e| e.to_string())?;
@@ -96,7 +104,6 @@ fn add_category(name: String) -> Result<String, String> {
 
 #[tauri::command]
 fn get_categories() -> Result<Vec<Category>, String> {
-    // Initialize database
     init_database().map_err(|e| e.to_string())?;
 
     let mut conn = get_connection().map_err(|e| e.to_string())?;
@@ -122,6 +129,7 @@ pub struct Item {
     pub discount_type: String,
     pub category: String,
     pub barcode: String,
+    pub quantity: i32,
 }
 
 #[tauri::command]
@@ -134,6 +142,7 @@ fn add_item(
     discountType: String,
     category: String,
     barcode: String,
+    quantity: i32,
 ) -> Result<String, String> {
     init_database().map_err(|e| e.to_string())?;
     let mut conn = get_connection().map_err(|e| e.to_string())?;
@@ -148,7 +157,7 @@ fn add_item(
     let category_id = category_id.ok_or_else(|| "Category not found".to_string())?;
 
     conn.exec_drop(
-        "INSERT INTO items (name, code, buying_price, selling_price, discount, discount_type, category_id, barcode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO items (name, code, buying_price, selling_price, discount, discount_type, category_id, barcode, quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             name.clone(),
             code.clone(),
@@ -158,6 +167,7 @@ fn add_item(
             discountType.clone(),
             category_id,
             barcode.clone(),
+            quantity,
         ),
     )
     .map_err(|e| {
@@ -178,8 +188,11 @@ fn get_items() -> Result<Vec<Item>, String> {
 
     let items: Vec<Item> = conn
         .query_map(
-            "SELECT i.id, i.name, i.code, i.buying_price, i.selling_price, i.discount, i.discount_type, c.name, i.barcode FROM items i JOIN categories c ON i.category_id = c.id ORDER BY i.created_at DESC",
-            |(id, name, code, buying_price, selling_price, discount, discount_type, category, barcode)| Item {
+            "SELECT i.id, i.name, i.code, i.buying_price, i.selling_price, i.discount, i.discount_type, c.name, i.barcode, i.quantity 
+             FROM items i 
+             JOIN categories c ON i.category_id = c.id 
+             ORDER BY i.created_at DESC",
+            |(id, name, code, buying_price, selling_price, discount, discount_type, category, barcode, quantity)| Item {
                 id,
                 name,
                 code,
@@ -189,6 +202,7 @@ fn get_items() -> Result<Vec<Item>, String> {
                 discount_type,
                 category,
                 barcode,
+                quantity,
             },
         )
         .map_err(|e| e.to_string())?;
@@ -212,6 +226,7 @@ fn update_item(
     discountType: String,
     category: String,
     barcode: String,
+    quantity: i32,
 ) -> Result<String, String> {
     let mut conn = get_connection().map_err(|e| e.to_string())?;
 
@@ -227,7 +242,7 @@ fn update_item(
     conn.exec_drop(
         "UPDATE items
          SET name=?, code=?, buying_price=?, selling_price=?,
-             discount=?, discount_type=?, category_id=?, barcode=?
+             discount=?, discount_type=?, category_id=?, barcode=?, quantity=?
          WHERE id=?",
         (
             name,
@@ -238,6 +253,7 @@ fn update_item(
             discountType,
             category_id,
             barcode,
+            quantity,
             id,
         ),
     )
@@ -245,18 +261,17 @@ fn update_item(
 
     Ok("Item updated successfully".to_string())
 }
+
 #[tauri::command]
 fn delete_item(id: u32) -> Result<String, String> {
     let mut conn = get_connection().map_err(|e| e.to_string())?;
 
-    conn.exec_drop(
-        "DELETE FROM items WHERE id=?",
-        (id,),
-    )
-    .map_err(|e| e.to_string())?;
+    conn.exec_drop("DELETE FROM items WHERE id=?", (id,))
+        .map_err(|e| e.to_string())?;
 
     Ok("Item deleted successfully".to_string())
 }
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

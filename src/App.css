@@ -938,3 +938,48 @@ body {
   font-family: monospace;
   font-size: 0.72rem;
 }
+/* Total display in header */
+.header-total {
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 8px 18px;
+  border-radius: 32px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  backdrop-filter: blur(2px);
+  transition: all 0.2s ease;
+}
+
+.header-total .total-amount {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-weight: 1200;
+  letter-spacing: 0.5px;
+  color: #fffffe;
+}
+
+/* Dark mode adjustment */
+@media (prefers-color-scheme: dark) {
+  .header-total {
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+  .header-total .total-amount {
+    color: #ffffff;
+  }
+}
+
+/* Mobile responsiveness – stacking */
+@media (max-width: 768px) {
+  .header {
+    gap: 12px;
+  }
+  .header-total {
+    order: 2;          /* ensures it stays between title and dropdown */
+    width: 100%;
+    justify-content: center;
+  }
+  .page-selector {
+    order: 3;
+  }
+}

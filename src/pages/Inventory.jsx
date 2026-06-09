@@ -7,40 +7,8 @@ const generateBarcode = () => {
 };
 
 export default function Inventory() {
-  const [inventory, setInventory] = useState([
-    {
-      id: 1,
-      name: "Product A",
-      code: "PRD001",
-      buyingPrice: 10.0,
-      sellingPrice: 19.99,
-      discount: 0,
-      discountType: "percentage",
-      category: "Electronics",
-      barcode: "BC1700000001ABC123",
-    },
-    {
-      id: 2,
-      name: "Product B",
-      code: "PRD002",
-      buyingPrice: 15.0,
-      sellingPrice: 29.99,
-      discount: 0,
-      discountType: "percentage",
-      category: "Clothing",
-      barcode: "BC1700000002DEF456",
-    },
-  ]);
-
-  const [categories, setCategories] = useState([
-    "Electronics",
-    "Clothing",
-    "Food",
-    "Books",
-    "Furniture",
-    "Other",
-  ]);
-
+  const [inventory, setInventory] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -59,9 +27,11 @@ export default function Inventory() {
     discountType: "percentage",
     category: "",
     barcode: generateBarcode(),
+    quantity: 0,
   });
-const [editingId, setEditingId] = useState(null);
-  // Load categories from database on mount
+  const [editingId, setEditingId] = useState(null);
+
+  // Load categories & items from database on mount
   useEffect(() => {
     loadCategories();
     loadItems();
@@ -79,23 +49,22 @@ const [editingId, setEditingId] = useState(null);
     }
   };
 
-const loadItems = async () => {
-  try {
-    const result = await invoke("get_items");
-
-    const formattedItems = result.map(item => ({
-      ...item,
-      buyingPrice: Number(item.buyingPrice || item.buying_price || 0),
-      sellingPrice: Number(item.sellingPrice || item.selling_price || 0),
-      discount: Number(item.discount || 0),
-      discountType: item.discountType || item.discount_type || "percentage", // ✅ added this line
-    }));
-
-    setInventory(formattedItems);
-  } catch (err) {
-    console.error("Failed to load items:", err);
-  }
-};
+  const loadItems = async () => {
+    try {
+      const result = await invoke("get_items");
+      const formattedItems = result.map(item => ({
+        ...item,
+        buyingPrice: Number(item.buyingPrice || item.buying_price || 0),
+        sellingPrice: Number(item.sellingPrice || item.selling_price || 0),
+        discount: Number(item.discount || 0),
+        quantity: Number(item.quantity || 0),
+        discountType: item.discountType || item.discount_type || "percentage",
+      }));
+      setInventory(formattedItems);
+    } catch (err) {
+      console.error("Failed to load items:", err);
+    }
+  };
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
@@ -120,50 +89,44 @@ const loadItems = async () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === "discountType") {
-      setFormData({ ...formData, [name]: value });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleGenerateBarcode = () => {
     setFormData({ ...formData, barcode: generateBarcode() });
   };
 
-const openAddItemModal = () => {
-  setEditingId(null);
+  const openAddItemModal = () => {
+    setEditingId(null);
+    setFormData({
+      name: "",
+      code: "",
+      buyingPrice: "",
+      sellingPrice: "",
+      discount: "",
+      discountType: "percentage",
+      category: "",
+      barcode: generateBarcode(),
+      quantity: 0,
+    });
+    setShowModal(true);
+  };
 
-  setFormData({
-    name: "",
-    code: "",
-    buyingPrice: "",
-    sellingPrice: "",
-    discount: "",
-    discountType: "percentage",
-    category: "",
-    barcode: generateBarcode(),
-  });
-
-  setShowModal(true);
-};
-
-const editProduct = (item) => {
-  setEditingId(item.id);
-
-  setFormData({
-    name: item.name || "",
-    code: item.code || "",
-    buyingPrice: item.buyingPrice || "",
-    sellingPrice: item.sellingPrice || "",
-    discount: item.discount || "",
-    discountType: item.discountType || "percentage",
-    category: item.category || "",
-    barcode: item.barcode || "",
-  });
-
-  setShowModal(true);
-};
+  const editProduct = (item) => {
+    setEditingId(item.id);
+    setFormData({
+      name: item.name || "",
+      code: item.code || "",
+      buyingPrice: item.buyingPrice || "",
+      sellingPrice: item.sellingPrice || "",
+      discount: item.discount || "",
+      discountType: item.discountType || "percentage",
+      category: item.category || "",
+      barcode: item.barcode || "",
+      quantity: item.quantity || 0,
+    });
+    setShowModal(true);
+  };
 
   const closeModal = () => {
     setShowModal(false);
@@ -187,77 +150,37 @@ const editProduct = (item) => {
       setItemError("");
 
       try {
-  if (editingId) {
-    const updatedProduct = {
-      id: editingId,
-      name: formData.name,
-      code: formData.code,
-      buyingPrice: parseFloat(formData.buyingPrice),
-      sellingPrice: parseFloat(formData.sellingPrice),
-      discount: formData.discount ? parseFloat(formData.discount) : 0,
-      discountType: formData.discountType,
-      category: formData.category,
-      barcode: formData.barcode,
-    };
-
-    setInventory(
-      inventory.map((item) =>
-        item.id === editingId ? updatedProduct : item
-      )
-    );
-
-    // Optional Tauri command
-   await invoke("update_item", {
-  id: editingId,
-  name: formData.name,
-  code: formData.code,
-  buyingPrice: parseFloat(formData.buyingPrice),
-  sellingPrice: parseFloat(formData.sellingPrice),
-  discount: formData.discount
-    ? parseFloat(formData.discount)
-    : 0,
-  discountType: formData.discountType,
-  category: formData.category,
-  barcode: formData.barcode,
-});
-
-await loadItems();
-
-  } else {
-    await invoke("add_item", {
-      name: formData.name,
-      code: formData.code,
-      buyingPrice: parseFloat(formData.buyingPrice),
-      sellingPrice: parseFloat(formData.sellingPrice),
-      discount: formData.discount
-        ? parseFloat(formData.discount)
-        : 0,
-      discountType: formData.discountType,
-      category: formData.category,
-      barcode: formData.barcode,
-    });
-
-    const newProduct = {
-      id: Date.now(),
-      name: formData.name,
-      code: formData.code,
-      buyingPrice: parseFloat(formData.buyingPrice),
-      sellingPrice: parseFloat(formData.sellingPrice),
-      discount: formData.discount
-        ? parseFloat(formData.discount)
-        : 0,
-      discountType: formData.discountType,
-      category: formData.category,
-      barcode: formData.barcode,
-    };
-
-    setInventory([...inventory, newProduct]);
-  }
-
-  closeModal();
-} catch (err) {
-  setItemError(err?.toString?.() || "Failed to save item");
-} finally {
+        if (editingId) {
+          await invoke("update_item", {
+            id: editingId,
+            name: formData.name,
+            code: formData.code,
+            buyingPrice: parseFloat(formData.buyingPrice),
+            sellingPrice: parseFloat(formData.sellingPrice),
+            discount: formData.discount ? parseFloat(formData.discount) : 0,
+            discountType: formData.discountType,
+            category: formData.category,
+            barcode: formData.barcode,
+            quantity: parseInt(formData.quantity) || 0,
+          });
+        } else {
+          await invoke("add_item", {
+            name: formData.name,
+            code: formData.code,
+            buyingPrice: parseFloat(formData.buyingPrice),
+            sellingPrice: parseFloat(formData.sellingPrice),
+            discount: formData.discount ? parseFloat(formData.discount) : 0,
+            discountType: formData.discountType,
+            category: formData.category,
+            barcode: formData.barcode,
+            quantity: parseInt(formData.quantity) || 0,
+          });
+        }
+        await loadItems(); // refresh list
+        closeModal();
+      } catch (err) {
+        setItemError(err?.toString?.() || "Failed to save item");
+      } finally {
         setItemLoading(false);
       }
     } else {
@@ -265,15 +188,17 @@ await loadItems();
     }
   };
 
-const deleteProduct = async (id) => {
-  try {
-    await invoke("delete_item", { id });
-    await loadItems();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to delete item");
-  }
-};
+  const deleteProduct = async (id) => {
+    if (window.confirm("Are you sure you want to delete this item?")) {
+      try {
+        await invoke("delete_item", { id });
+        await loadItems();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete item");
+      }
+    }
+  };
 
   const filteredInventory =
     selectedCategory === ""
@@ -317,7 +242,7 @@ const deleteProduct = async (id) => {
         </button>
       </div>
 
-      {/* Add Category Modal Dialog */}
+      {/* Add Category Modal */}
       {showCategoryModal && (
         <div className="modal-overlay" onClick={closeCategoryModal}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -327,7 +252,6 @@ const deleteProduct = async (id) => {
                 ×
               </button>
             </div>
-
             <div className="modal-body">
               <div className="form-group">
                 <label>Category Name *</label>
@@ -337,30 +261,18 @@ const deleteProduct = async (id) => {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      handleAddCategory();
-                    }
+                    if (e.key === "Enter") handleAddCategory();
                   }}
                   autoFocus
                 />
               </div>
-
               {error && <div className="error-message">{error}</div>}
             </div>
-
             <div className="modal-footer">
-              <button
-                className="btn-cancel"
-                onClick={closeCategoryModal}
-                disabled={loading}
-              >
+              <button className="btn-cancel" onClick={closeCategoryModal} disabled={loading}>
                 Cancel
               </button>
-              <button
-                className="btn-save"
-                onClick={handleAddCategory}
-                disabled={loading}
-              >
+              <button className="btn-save" onClick={handleAddCategory} disabled={loading}>
                 {loading ? "Adding..." : "Add Category"}
               </button>
             </div>
@@ -368,17 +280,16 @@ const deleteProduct = async (id) => {
         </div>
       )}
 
-      {/* Add Item Modal Dialog */}
+      {/* Add/Edit Item Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-             <h3>{editingId ? "Edit Item" : "Add New Item"}</h3>
+              <h3>{editingId ? "Edit Item" : "Add New Item"}</h3>
               <button className="modal-close" onClick={closeModal}>
                 ×
               </button>
             </div>
-
             <div className="modal-body">
               <div className="form-row">
                 <div className="form-group">
@@ -468,22 +379,36 @@ const deleteProduct = async (id) => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Barcode (Auto-generated)</label>
-                <div className="barcode-group">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Quantity *</label>
                   <input
-                    type="text"
-                    value={formData.barcode}
-                    readOnly
-                    className="barcode-input"
+                    type="number"
+                    name="quantity"
+                    placeholder="0"
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="1"
                   />
-                  <button
-                    type="button"
-                    className="btn-regenerate"
-                    onClick={handleGenerateBarcode}
-                  >
-                    Regenerate
-                  </button>
+                </div>
+                <div className="form-group">
+                  <label>Barcode (Auto-generated)</label>
+                  <div className="barcode-group">
+                    <input
+                      type="text"
+                      value={formData.barcode}
+                      readOnly
+                      className="barcode-input"
+                    />
+                    <button
+                      type="button"
+                      className="btn-regenerate"
+                      onClick={handleGenerateBarcode}
+                    >
+                      Regenerate
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -495,11 +420,7 @@ const deleteProduct = async (id) => {
                 Cancel
               </button>
               <button className="btn-save" onClick={addProduct} disabled={itemLoading}>
-                {itemLoading
-  ? "Saving..."
-  : editingId
-  ? "Update Item"
-  : "Save Item"}
+                {itemLoading ? "Saving..." : editingId ? "Update Item" : "Save Item"}
               </button>
             </div>
           </div>
@@ -515,13 +436,13 @@ const deleteProduct = async (id) => {
             <th>Buying Price (LKR)</th>
             <th>Selling Price (LKR)</th>
             <th>Discount</th>
+            <th>Quantity</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {filteredInventory.map((item) => (
             <tr key={item.id}>
-            
               <td>{item.name}</td>
               <td>{item.code}</td>
               <td>
@@ -539,21 +460,15 @@ const deleteProduct = async (id) => {
                   <span>-</span>
                 )}
               </td>
+              <td>{item.quantity}</td>
               <td>
-  <button
-    className="btn-edit"
-    onClick={() => editProduct(item)}
-  >
-    Edit
-  </button>
-
-  <button
-    className="btn-delete"
-    onClick={() => deleteProduct(item.id)}
-  >
-    Delete
-  </button>
-</td>
+                <button className="btn-edit" onClick={() => editProduct(item)}>
+                  Edit
+                </button>
+                <button className="btn-delete" onClick={() => deleteProduct(item.id)}>
+                  Delete
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

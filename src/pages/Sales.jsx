@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import QuantityDialog from "./QuantityDialog";
 
-export default function Sales() {
-  const [cartItems, setCartItems] = useState([]);
+export default function Sales({ cartItems, setCartItems }) {
   const [inventory, setInventory] = useState([]);
   const [searchCode, setSearchCode] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -11,7 +10,7 @@ export default function Sales() {
   const [error, setError] = useState("");
 
   // QuantityDialog state
-  const [pendingProduct, setPendingProduct] = useState(null); // product awaiting qty
+  const [pendingProduct, setPendingProduct] = useState(null);
 
   const searchInputRef = useRef(null);
   const suggestionRefs = useRef([]);
@@ -43,27 +42,21 @@ export default function Sales() {
   };
 
   // ─── Suggestion scoring ───────────────────────────────────────────────────
-  // Returns a score: lower = better match
-  // 0 = exact match on code/barcode
-  // 1 = starts-with match on code/barcode
-  // 2 = starts-with match on name
-  // 3 = contains match on code/barcode
-  // 4 = contains match on name
   const scoreMatch = (item, query) => {
     const q = query.toLowerCase();
     const code = (item.code || "").toLowerCase();
     const barcode = (item.barcode || "").toLowerCase();
     const name = (item.name || "").toLowerCase();
 
-    if (code === q ) return 0;
-    if (code.startsWith(q) ) return 1;
+    if (code === q) return 0;
+    if (code.startsWith(q)) return 1;
     if (name.startsWith(q)) return 2;
     if (code.includes(q)) return 3;
     if (name.includes(q)) return 4;
-    return 99; // no match
+    return 99;
   };
 
-  // Filter + sort suggestions based on match quality
+  // Filter + sort suggestions
   useEffect(() => {
     if (searchCode.trim() === "") {
       setSuggestions([]);
@@ -95,7 +88,7 @@ export default function Sales() {
     }
   }, [selectedSuggestionIndex]);
 
-  // ─── Open quantity dialog for a product ───────────────────────────────────
+  // ─── Open quantity dialog ────────────────────────────────────────────────
   const openQtyDialog = (product) => {
     setSearchCode(product.code || product.barcode || "");
     setSuggestions([]);
@@ -152,9 +145,7 @@ export default function Sales() {
       return;
     }
     const product = inventory.find(
-      item =>
-        item.code?.toLowerCase() === searchCode.trim().toLowerCase() 
-        
+      item => item.code?.toLowerCase() === searchCode.trim().toLowerCase()
     );
     if (product) {
       openQtyDialog(product);

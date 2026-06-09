@@ -55,10 +55,10 @@ export default function Sales() {
     const barcode = (item.barcode || "").toLowerCase();
     const name = (item.name || "").toLowerCase();
 
-    if (code === q || barcode === q) return 0;
-    if (code.startsWith(q) || barcode.startsWith(q)) return 1;
+    if (code === q ) return 0;
+    if (code.startsWith(q) ) return 1;
     if (name.startsWith(q)) return 2;
-    if (code.includes(q) || barcode.includes(q)) return 3;
+    if (code.includes(q)) return 3;
     if (name.includes(q)) return 4;
     return 99; // no match
   };
@@ -148,18 +148,18 @@ export default function Sales() {
   const handleSearch = () => {
     setError("");
     if (!searchCode.trim()) {
-      setError("Please enter a product code or barcode.");
+      setError("Please enter a product code.");
       return;
     }
     const product = inventory.find(
       item =>
-        item.code?.toLowerCase() === searchCode.trim().toLowerCase() ||
-        item.barcode?.toLowerCase() === searchCode.trim().toLowerCase()
+        item.code?.toLowerCase() === searchCode.trim().toLowerCase() 
+        
     );
     if (product) {
       openQtyDialog(product);
     } else {
-      setError(`Product with code/barcode "${searchCode}" not found.`);
+      setError(`Product with code "${searchCode}" not found.`);
     }
   };
 
@@ -206,7 +206,7 @@ export default function Sales() {
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Type or scan code / barcode / name"
+            placeholder="Type product code or scan barcode"
             value={searchCode}
             onChange={(e) => setSearchCode(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -224,7 +224,6 @@ export default function Sales() {
                   onMouseEnter={() => setSelectedSuggestionIndex(idx)}
                 >
                   <strong>{item.code}</strong>
-                  {item.barcode && ` (${item.barcode})`}
                   {" — "}
                   {item.name}
                   <span className="suggestion-price">

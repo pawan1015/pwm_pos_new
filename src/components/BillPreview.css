@@ -1,0 +1,125 @@
+/* Thermal receipt style – matches image exactly */
+.bill-preview {
+  width: 300px;
+  margin: 20px auto;
+  background: rgb(0, 0, 0);
+  font-family: 'Courier New', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.bill-line {
+  text-align: center;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.bill-shop {
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+.bill-divider {
+  text-align: center;
+  letter-spacing: 2px;
+  margin: 6px 0;
+  color: #000000;
+}
+
+.bill-info {
+  margin: 8px 0;
+}
+
+.bill-info div {
+  white-space: pre;
+  font-family: inherit;
+}
+
+.bill-item {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.item-price {
+  white-space: nowrap;
+}
+
+.bill-totals {
+  margin: 8px 0;
+}
+
+.total-line {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.grand-total {
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.bill-footer {
+  text-align: center;
+  margin: 10px 0 6px;
+  font-size: 11px;
+}
+
+.btn-print {
+  width: 100%;
+  margin-top: 12px;
+  padding: 6px;
+  background: #9e0000;
+  color: rgb(0, 0, 0);
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.btn-print:hover {
+  background: #0574e4;
+}
+
+/* Print styles – hide everything else */
+@media print {
+  .btn-print,
+  .btn-checkout,
+  .btn-new-sale,
+  .sales-search,
+  .cart-table,
+  .header,
+  .page-selector,
+  .sales-summary button,
+  .header-total,
+  .discount-input {
+    display: none;
+  }
+
+  .bill-preview {
+    margin: 0;
+    padding: 8px;
+    border: none;
+    box-shadow: none;
+    width: auto;
+  }
+
+  body {
+    background: rgb(184, 0, 0);
+  }
+}

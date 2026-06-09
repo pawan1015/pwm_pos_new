@@ -983,3 +983,38 @@ body {
     order: 3;
   }
 }
+
+.discount-input {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.discount-input label {
+  font-weight: 600;
+}
+
+.discount-input input {
+  width: 120px;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.btn-new-sale {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-new-sale:hover {
+  background-color: #218838;
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import QuantityDialog from "./QuantityDialog";
+import QuantityDialog from "../components/QuantityDialog";
+import BillPreview from "../components/BillPreview";
 
 export default function Sales({ cartItems, setCartItems }) {
   const [inventory, setInventory] = useState([]);
@@ -8,14 +9,15 @@ export default function Sales({ cartItems, setCartItems }) {
   const [suggestions, setSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [error, setError] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const [showBill, setShowBill] = useState(false);
+  const [lastInvoice, setLastInvoice] = useState(null);
 
-  // QuantityDialog state
   const [pendingProduct, setPendingProduct] = useState(null);
-
   const searchInputRef = useRef(null);
   const suggestionRefs = useRef([]);
 
-  // Load inventory from backend
+  // Load inventory
   useEffect(() => {
     loadInventory();
   }, []);
@@ -41,7 +43,7 @@ export default function Sales({ cartItems, setCartItems }) {
     }
   };
 
-  // ─── Suggestion scoring ───────────────────────────────────────────────────
+  // Suggestion scoring
   const scoreMatch = (item, query) => {
     const q = query.toLowerCase();
     const code = (item.code || "").toLowerCase();
@@ -56,7 +58,6 @@ export default function Sales({ cartItems, setCartItems }) {
     return 99;
   };
 
-  // Filter + sort suggestions
   useEffect(() => {
     if (searchCode.trim() === "") {
       setSuggestions([]);
@@ -64,7 +65,6 @@ export default function Sales({ cartItems, setCartItems }) {
       return;
     }
     const query = searchCode.trim();
-
     const scored = inventory
       .map(item => ({ item, score: scoreMatch(item, query) }))
       .filter(({ score }) => score < 99)
@@ -76,19 +76,12 @@ export default function Sales({ cartItems, setCartItems }) {
     setSelectedSuggestionIndex(-1);
   }, [searchCode, inventory]);
 
-  // Scroll highlighted suggestion into view
   useEffect(() => {
-    if (
-      selectedSuggestionIndex >= 0 &&
-      suggestionRefs.current[selectedSuggestionIndex]
-    ) {
-      suggestionRefs.current[selectedSuggestionIndex].scrollIntoView({
-        block: "nearest",
-      });
+    if (selectedSuggestionIndex >= 0 && suggestionRefs.current[selectedSuggestionIndex]) {
+      suggestionRefs.current[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
     }
   }, [selectedSuggestionIndex]);
 
-  // ─── Open quantity dialog ────────────────────────────────────────────────
   const openQtyDialog = (product) => {
     setSearchCode(product.code || product.barcode || "");
     setSuggestions([]);
@@ -97,7 +90,6 @@ export default function Sales({ cartItems, setCartItems }) {
     setPendingProduct(product);
   };
 
-  // ─── Keyboard navigation on search input ─────────────────────────────────
   const handleKeyDown = (e) => {
     if (suggestions.length === 0) {
       if (e.key === "Enter") {
@@ -110,9 +102,7 @@ export default function Sales({ cartItems, setCartItems }) {
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setSelectedSuggestionIndex(prev =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
+        setSelectedSuggestionIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
         break;
       case "ArrowUp":
         e.preventDefault();
@@ -137,7 +127,6 @@ export default function Sales({ cartItems, setCartItems }) {
     }
   };
 
-  // Manual search (exact match)
   const handleSearch = () => {
     setError("");
     if (!searchCode.trim()) {
@@ -154,10 +143,8 @@ export default function Sales({ cartItems, setCartItems }) {
     }
   };
 
-  // ─── QuantityDialog callbacks ─────────────────────────────────────────────
   const handleQtyConfirm = (qty) => {
     if (!pendingProduct) return;
-
     const newItem = {
       id: Date.now(),
       name: pendingProduct.name,
@@ -165,7 +152,6 @@ export default function Sales({ cartItems, setCartItems }) {
       quantity: qty,
     };
     setCartItems(prev => [...prev, newItem]);
-
     setPendingProduct(null);
     setSearchCode("");
     setSuggestions([]);
@@ -178,19 +164,42 @@ export default function Sales({ cartItems, setCartItems }) {
     setTimeout(() => searchInputRef.current?.focus(), 50);
   };
 
-  // ─── Cart helpers ─────────────────────────────────────────────────────────
   const removeItem = (id) => {
     setCartItems(cartItems.filter(item => item.id !== id));
   };
 
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = subtotal - discount;
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const handleCheckout = () => {
+    if (cartItems.length === 0) return;
+    const invoiceNo = `INV-${Date.now()}`;
+    setLastInvoice({
+      invoice: invoiceNo,
+      items: [...cartItems],
+      subtotal,
+      discount,
+      total,
+      cashier: "Default Cashier",
+    });
+    setShowBill(true);
+    setCartItems([]);
+    setDiscount(0);
+  };
+
+  const handleNewSale = () => {
+    setShowBill(false);
+    setLastInvoice(null);
+    setDiscount(0);
+    setSearchCode("");
+    setError("");
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
   return (
     <div className="page-container">
       <h2>Sales</h2>
 
-      {/* Search with autocomplete */}
       <div className="sales-search">
         <div className="form-group" style={{ width: "1%", flex: 2, position: "relative" }}>
           <label>Product Code / Barcode</label>
@@ -214,12 +223,8 @@ export default function Sales({ cartItems, setCartItems }) {
                   onClick={() => openQtyDialog(item)}
                   onMouseEnter={() => setSelectedSuggestionIndex(idx)}
                 >
-                  <strong>{item.code}</strong>
-                  {" — "}
-                  {item.name}
-                  <span className="suggestion-price">
-                    LKR {item.sellingPrice.toFixed(2)}
-                  </span>
+                  <strong>{item.code}</strong> — {item.name}
+                  <span className="suggestion-price">LKR {item.sellingPrice.toFixed(2)}</span>
                 </li>
               ))}
             </ul>
@@ -229,7 +234,6 @@ export default function Sales({ cartItems, setCartItems }) {
 
       {error && <p className="error-msg">{error}</p>}
 
-      {/* Cart table */}
       <table className="cart-table">
         <thead>
           <tr>
@@ -248,34 +252,54 @@ export default function Sales({ cartItems, setCartItems }) {
               <td>{item.quantity}</td>
               <td>{(item.price * item.quantity).toFixed(2)}</td>
               <td>
-                <button className="btn-remove" onClick={() => removeItem(item.id)}>
-                  Remove
-                </button>
+                <button className="btn-remove" onClick={() => removeItem(item.id)}>Remove</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {cartItems.length === 0 && (
+      {cartItems.length === 0 && !showBill && (
         <div className="empty-state">
           <p>No items added. Search for a product using its code, barcode, or name.</p>
         </div>
       )}
 
       <div className="sales-summary">
+        <div className="discount-input" style={{ marginBottom: "10px" }}>
+          <label>Discount (LKR): </label>
+          <input
+            type="number"
+            value={discount}
+            onChange={(e) => setDiscount(Math.max(0, Number(e.target.value) || 0))}
+            min="0"
+            step="10"
+          />
+        </div>
+        <h3>Subtotal: LKR {subtotal.toFixed(2)}</h3>
         <h3>Total: LKR {total.toFixed(2)}</h3>
-        <button className="btn-checkout" disabled={cartItems.length === 0}>
+        <button className="btn-checkout" onClick={handleCheckout} disabled={cartItems.length === 0}>
           Checkout
         </button>
+        {showBill && (
+          <button className="btn-new-sale" onClick={handleNewSale} style={{ marginLeft: "10px" }}>
+            New Sale
+          </button>
+        )}
       </div>
 
-      {/* Quantity Dialog */}
-      <QuantityDialog
-        product={pendingProduct}
-        onConfirm={handleQtyConfirm}
-        onCancel={handleQtyCancel}
-      />
+      {showBill && lastInvoice && (
+        <BillPreview
+          invoice={lastInvoice.invoice}
+          cartItems={lastInvoice.items}
+          subtotal={lastInvoice.subtotal}
+          discount={lastInvoice.discount}
+          total={lastInvoice.total}
+          cashier={lastInvoice.cashier}
+        />
+      )}
+
+      <QuantityDialog product={pendingProduct} onConfirm={handleQtyConfirm} onCancel={handleQtyCancel} />
     </div>
   );
 }

@@ -685,6 +685,8 @@ body {
   align-items: flex-end;
   margin-bottom: 20px;
   position: relative;
+  width:500px;
+  margin-left:370px;
 }
 
 .suggestions-dropdown {

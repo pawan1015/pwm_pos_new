@@ -201,7 +201,7 @@ export default function Sales() {
 
       {/* Search with autocomplete */}
       <div className="sales-search">
-        <div className="form-group" style={{ flex: 2, position: "relative" }}>
+        <div className="form-group" style={{ width: "1%", flex: 2, position: "relative" }}>
           <label>Product Code / Barcode</label>
           <input
             ref={searchInputRef}
